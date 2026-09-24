@@ -38,11 +38,17 @@ show_lid_in_bottom_scene = is_undef(show_lid_override) ? true : show_lid_overrid
 
 // Small snap bumps on the lid skirt with matching pockets in the bottom shell.
 lid_snap_enabled = is_undef(lid_snap_override) ? true : lid_snap_override;
-lid_snap_d = 1.2;
+lid_snap_d = 1.3;
 lid_snap_pocket_d = 1.8;
 lid_snap_pocket_depth = wall + 0.8;
 lid_snap_x_spacing = 34.0;
 lid_snap_z = top_thickness + lid_overlap_height / 2;
+lid_friction_rib_enabled = is_undef(lid_friction_rib_override) ? true : lid_friction_rib_override;
+lid_friction_rib_w = 3.5;
+lid_friction_rib_projection = 0.1;
+lid_friction_rib_h = 1.5;
+lid_friction_rib_z = top_thickness + 0.6;
+lid_friction_rib_x_spacing = 36.0;
 
 // Exterior lid styling. These are shallow cuts on the outside face only.
 lid_style_enabled = is_undef(lid_style_override) ? true : lid_style_override;
@@ -504,6 +510,27 @@ module lid_snap_bumps() {
         sphere(d = lid_snap_d);
 }
 
+module lid_friction_ribs() {
+    lid_skirt_y_min = outer_wid / 2 - lid_skirt_outer_wid / 2;
+    lid_skirt_y_max = outer_wid / 2 + lid_skirt_outer_wid / 2;
+
+    for (x = [outer_len / 2 - lid_friction_rib_x_spacing / 2, outer_len / 2 + lid_friction_rib_x_spacing / 2]) {
+        translate([
+            x - lid_friction_rib_w / 2,
+            lid_skirt_y_min - lid_friction_rib_projection,
+            lid_friction_rib_z
+        ])
+            cube([lid_friction_rib_w, lid_friction_rib_projection, lid_friction_rib_h]);
+
+        translate([
+            x - lid_friction_rib_w / 2,
+            lid_skirt_y_max,
+            lid_friction_rib_z
+        ])
+            cube([lid_friction_rib_w, lid_friction_rib_projection, lid_friction_rib_h]);
+    }
+}
+
 module lid_snap_pockets() {
     lid_snap_pocket_z = bottom_outer_h - lid_recess_depth / 2;
 
@@ -802,6 +829,10 @@ module top_half() {
 
             if (lid_snap_enabled) {
                 lid_snap_bumps();
+            }
+
+            if (lid_friction_rib_enabled) {
+                lid_friction_ribs();
             }
         }
 
