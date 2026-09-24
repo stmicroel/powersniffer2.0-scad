@@ -1,0 +1,9 @@
+.DS_Store
+*.stl
+*.gcode
+*.gcode.*
+
+# Keep checked print-ready 3MF files in print-ready/.
+/*.3mf
+!/print-ready/
+!/print-ready/*.3mf
