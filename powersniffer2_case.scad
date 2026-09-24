@@ -29,7 +29,7 @@ corner_r = 4.0;
 fit_clearance = 0.15;
 
 // Upper case level and lid fit.
-case_wall_extra_h = 5.0;
+case_wall_extra_h = 7.0;
 lid_recess_depth = 3.0;
 lid_recess_wall = 1.2;
 lid_overlap_height = 2.8;
@@ -54,10 +54,16 @@ lid_label_size = 3.8;
 lid_label_y = 6.4;
 lid_label_depth = 0.4;
 lid_label_font = "Liberation Sans:style=Bold";
-body_style_enabled = is_undef(body_style_override) ? true : body_style_override;
-body_side_groove_h = 0.65;
-body_side_groove_depth = 0.35;
-body_side_groove_len_margin = 7.0;
+
+// Diagonal ventilation slots on the long side walls.
+body_side_vent_enabled = is_undef(body_side_vent_override) ? true : body_side_vent_override;
+body_side_vent_count = 9;
+body_side_vent_x_margin = 7.5;
+body_side_vent_bottom_margin = 0.6;
+body_side_vent_top_margin = 0.6;
+body_side_vent_w = 1.3;
+body_side_vent_angle = 18;
+body_side_vent_depth = wall + 0.4;
 
 // Centered display opening in the lid.
 display_window_enabled = is_undef(display_window_override) ? true : display_window_override;
@@ -259,6 +265,13 @@ lid_skirt_inner_wid = lid_skirt_outer_wid - lid_wall * 2;
 battery_slot_len = battery_len + battery_clearance_xy * 2;
 battery_slot_wid = battery_wid + battery_clearance_xy * 2;
 battery_slot_h = battery_h + battery_clearance_z;
+body_side_vent_bottom_z = floor_thickness + battery_deck_h + body_side_vent_bottom_margin;
+body_side_vent_top_z = bottom_outer_h - lid_recess_depth - body_side_vent_top_margin;
+body_side_vent_z = (body_side_vent_bottom_z + body_side_vent_top_z) / 2;
+body_side_vent_h = max(
+    body_side_vent_w,
+    (body_side_vent_top_z - body_side_vent_bottom_z - body_side_vent_w * sin(body_side_vent_angle)) / cos(body_side_vent_angle)
+);
 
 battery_x = wall + (inner_len - battery_slot_len) / 2;
 battery_y = wall + (inner_wid - battery_slot_wid) / 2;
@@ -528,15 +541,35 @@ module lid_exterior_style_cutouts() {
                 text(lid_label_text, size = lid_label_size, font = lid_label_font, halign = "center", valign = "center");
 }
 
-module body_exterior_style_cutouts() {
-    groove_z = bottom_outer_h - lid_recess_depth - 2.2;
-    groove_len = outer_len - body_side_groove_len_margin * 2;
+module body_side_vent_slot_2d() {
+    hull() {
+        translate([0, -body_side_vent_h / 2 + body_side_vent_w / 2])
+            circle(d = body_side_vent_w);
 
-    translate([body_side_groove_len_margin, -0.1, groove_z])
-        cube([groove_len, body_side_groove_depth + 0.1, body_side_groove_h]);
+        translate([0, body_side_vent_h / 2 - body_side_vent_w / 2])
+            circle(d = body_side_vent_w);
+    }
+}
 
-    translate([body_side_groove_len_margin, outer_wid - body_side_groove_depth, groove_z])
-        cube([groove_len, body_side_groove_depth + 0.1, body_side_groove_h]);
+module body_side_vent_cutouts() {
+    usable_len = outer_len - body_side_vent_x_margin * 2;
+    vent_spacing_divisor = max(1, body_side_vent_count - 1);
+
+    for (i = [0 : body_side_vent_count - 1]) {
+        vent_x = body_side_vent_x_margin + usable_len * i / vent_spacing_divisor;
+
+        translate([vent_x, -0.2, body_side_vent_z])
+            rotate([-90, 0, 0])
+                linear_extrude(height = body_side_vent_depth)
+                    rotate([0, 0, body_side_vent_angle])
+                        body_side_vent_slot_2d();
+
+        translate([vent_x, outer_wid + 0.2, body_side_vent_z])
+            rotate([90, 0, 0])
+                linear_extrude(height = body_side_vent_depth)
+                    rotate([0, 0, -body_side_vent_angle])
+                        body_side_vent_slot_2d();
+    }
 }
 
 module ina219_reference() {
@@ -730,8 +763,8 @@ module bottom_half() {
             lid_snap_pockets();
         }
 
-        if (body_style_enabled) {
-            body_exterior_style_cutouts();
+        if (body_side_vent_enabled) {
+            body_side_vent_cutouts();
         }
     }
 
